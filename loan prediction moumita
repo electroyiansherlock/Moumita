@@ -1,0 +1,648 @@
+
+# A loan application is used by borrowers to apply for a loan. Through the loan application, borrowers reveal key details about their finances to the lender. The loan application is 
+# crucial to determining whether the lender will grant the request for funds or credit."
+
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+%matplotlib inline
+import warnings
+warnings.filterwarnings("ignore")
+
+### Loading Data Train & Test
+
+# Reading the loan_train.csv file from the given URL and storing it in a pandas dataframe named loan_data
+loan_data = pd.read_csv("https://raw.githubusercontent.com/dphi-official/Datasets/master/Loan_Data/loan_train.csv",index_col=False)
+
+# Removing the column named 'Unnamed: 0' from the loan_data dataframe using the drop() method
+loan_data = loan_data.drop(['Unnamed: 0'], axis=1)
+
+# Displaying the first few rows of the loan_data dataframe using the head() method
+loan_data.head()
+
+test_data = pd.read_csv('https://raw.githubusercontent.com/dphi-official/Datasets/master/Loan_Data/loan_test.csv')
+test_data.head()
+
+loan_data.shape
+
+loan_data['Loan_Status'].value_counts()
+
+# Counting the number of occurrences of each unique value in the 'Loan_Status' column of the 'loan_data' dataframe
+# and expressing the results as a proportion (i.e., a percentage) of the total number of rows in the dataframe
+
+loan_data['Loan_Status'].value_counts(normalize=True)
+
+# Counting the number of occurrences of each unique value in the 'Loan_Status' column of the 'loan_data' dataframe
+# and creating a bar plot to visualize the distribution of loan approvals and rejections
+
+loan_data['Loan_Status'].value_counts().plot.bar()
+
+# The loan of 343(around 69.85%) people out of 491 were approved.
+# Now, let's visualize each variable separately. Different types of variables are Categorical, ordinal and numerical.
+# Categorical features: These features have categories (Gender, Married, Self_Employed, Credit_History, Loan_Status)
+# Ordinal features: Variables in categorical features having some order involved (Dependents, Education, Property_Area)
+# Numerical features: These features have numerical values (ApplicantIncome, CoapplicantIncome, LoanAmount,Loan_Amount_Term)
+
+
+loan_data['Gender'].value_counts(normalize=True).plot.bar(title='Gender')
+plt.show()
+
+loan_data['Married'].value_counts(normalize=True).plot.bar(title='Married')
+plt.show()
+
+loan_data['Self_Employed'].value_counts(normalize=True).plot.bar(title='Self_Employed')
+plt.show()
+
+loan_data['Credit_History'].value_counts(normalize=True).plot.bar(title='Credit_History')
+plt.show()
+
+
+# 80% applicants in the dataset are male.
+# Around 65% of the applicants in the dataset are married.
+# Around 15% applicants in the dataset are self employed.
+# Around 85% applicants have repaid their doubts.
+
+loan_data['Dependents'].value_counts(normalize=True).plot.bar(title='Dependents')
+plt.show()
+
+loan_data['Education'].value_counts(normalize=True).plot.bar(title='Education')
+plt.show()
+
+loan_data['Property_Area'].value_counts(normalize=True).plot.bar(title='Property_Area')
+plt.show()
+
+
+# Creating a distribution plot to visualize the distribution of applicant incomes in the 'loan_data' dataframe
+# using the seaborn library's distplot() function
+
+sns.distplot(loan_data['ApplicantIncome'])
+plt.show()
+
+# Creating a box plot to visualize the distribution of applicant incomes in the 'loan_data' dataframe
+# using the pandas library's plot.box() function
+# and setting the figure size to 16x5 using the figsize parameter
+
+loan_data['ApplicantIncome'].plot.box(figsize=(16,5))
+plt.show()
+
+
+# Creating a box plot to visualize the distribution of applicant incomes in the 'loan_data' dataframe
+# based on the 'Education' column
+# using the pandas library's boxplot() function
+
+loan_data.boxplot(column='ApplicantIncome', by='Education')
+
+# Removing the default title using the suptitle() function with an empty string
+
+plt.suptitle("")
+
+
+sns.distplot(loan_data['CoapplicantIncome'])
+plt.show()
+
+loan_data['CoapplicantIncome'].plot.box(figsize=(16,5))
+plt.show()
+
+# Check for missing values in the 'loan_data' dataframe using the notna() method
+loan_data.notna()
+
+# Drop rows with missing values from the 'loan_data' dataframe using the dropna() method
+# train.dropna()
+
+# Print the rows in the 'loan_data' dataframe where the 'LoanAmount' column is missing using the dropna() method
+# print(train[train['LoanAmount'].isnull()])
+
+# Convert the 'LoanAmount' column in the 'loan_data' dataframe to numeric type using the to_numeric() method
+# train['LoanAmount'] = pd.to_numeric(train['LoanAmount'], errors='coerce')
+
+# Drop rows with missing values in the 'LoanAmount' column from the 'loan_data' dataframe using the dropna() method
+# train = train.dropna(subset=['LoanAmount'])
+
+# Convert the 'LoanAmount' column in the 'loan_data' dataframe to integer type using the astype() method
+# train['LoanAmount'] = train['LoanAmount'].astype(int)
+
+# Create a distribution plot to visualize the distribution of loan amounts in the 'loan_data' dataframe using the Seaborn library's distplot() function
+sns.distplot(loan_data['LoanAmount'])
+plt.show()
+
+# Create a box plot to visualize the distribution of loan amounts in the 'loan_data' dataframe using the Pandas library's plot.box() function, and sets the figure size to 16x5 using the figsize parameter
+loan_data['LoanAmount'].plot.box(figsize=(16,5))
+plt.show()
+
+
+
+
+# Creating a cross-tabulation table to show the number of loan approvals and rejections by gender in the 'loan_data' dataframe
+Gender = pd.crosstab(loan_data['Gender'], loan_data['Loan_Status'])
+
+# Dividing each value in the cross-tabulation table by the sum of the row to calculate the percentage of loan approvals and rejections for each gender
+# and creating a stacked bar chart to visualize the percentage of loan approvals and rejections by gender
+# using the pandas library's div() and plot() functions
+Gender.div(Gender.sum(axis=1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4,4))
+plt.show()
+
+
+# Creating cross-tabulation tables to show the number of loan approvals and rejections by various features in the 'loan_data' dataframe
+Married = pd.crosstab(loan_data['Married'], loan_data['Loan_Status'])
+Dependents = pd.crosstab(loan_data['Dependents'], loan_data['Loan_Status'])
+Education = pd.crosstab(loan_data['Education'], loan_data['Loan_Status'])
+Self_Employed = pd.crosstab(loan_data['Self_Employed'], loan_data['Loan_Status'])
+
+# Dividing each value in the cross-tabulation tables by the sum of the row to calculate the percentage of loan approvals and rejections for each feature
+# and creating stacked bar charts to visualize the percentage of loan approvals and rejections by each feature
+# using the pandas library's div() and plot() functions
+Married.div(Married.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4,4))
+plt.show()
+Dependents.div(Dependents.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4,4))
+plt.show()
+Education.div(Education.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4,4))
+plt.show()
+Self_Employed.div(Self_Employed.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4,4))
+plt.show()
+
+
+Credit_History = pd.crosstab(loan_data['Credit_History'], loan_data['Loan_Status'])
+Property_Area = pd.crosstab(loan_data['Property_Area'], loan_data['Loan_Status'])
+Credit_History.div(Credit_History.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True, figsize=(4, 4))
+plt.show()
+Property_Area.div(Property_Area.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True)
+plt.show()
+
+
+loan_data.groupby('Loan_Status')['ApplicantIncome'].mean().plot.bar()
+
+bins = [0, 2500, 4000, 6000, 81000]
+group = ['Low', 'Average', 'High', 'Very high']
+loan_data['Income_bin'] = pd.cut(loan_data['ApplicantIncome'], bins, labels=group)
+Income_bin = pd.crosstab(loan_data['Income_bin'], loan_data['Loan_Status'])
+Income_bin.div(Income_bin.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True)
+plt.xlabel('ApplicantIncome')
+plt.ylabel('Percentage')
+
+
+bins = [0, 1000, 3000, 42000]
+group = ['Low', 'Average', 'High']
+loan_data['Coapplicant_Income_bin'] = pd.cut(loan_data['CoapplicantIncome'], bins, labels=group)
+Coapplicant_Income_bin = pd.crosstab(loan_data['Coapplicant_Income_bin'], loan_data['Loan_Status'])
+Coapplicant_Income_bin.div(Coapplicant_Income_bin.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True)
+plt.xlabel('CoapplicantIncome')
+plt.ylabel('Percentage')
+
+
+loan_data['Total_Income'] = loan_data['ApplicantIncome'] + loan_data['CoapplicantIncome']
+bins = [0, 2500, 4000, 6000, 81000]
+group = ['Low', 'Average', 'High', 'Very high']
+loan_data['Total_Income_bin'] = pd.cut(loan_data['Total_Income'], bins, labels=group)
+Total_Income_bin = pd.crosstab(loan_data['Total_Income_bin'], loan_data['Loan_Status'])
+Total_Income_bin.div(Total_Income_bin.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True)
+plt.xlabel('Total_Income')
+P=plt.ylabel('Percentage')
+
+
+bins = [0, 100, 200, 700]
+group = ['Low', 'Average', 'High']
+loan_data['LoanAmount_bin'] = pd.cut(loan_data['LoanAmount'], bins, labels=group)
+LoanAmount_bin = pd.crosstab(loan_data['LoanAmount_bin'], loan_data['Loan_Status'])
+LoanAmount_bin.div(LoanAmount_bin.sum(1).astype(float), axis=0).plot(kind="bar", stacked=True)
+plt.xlabel('LoanAmount')
+P = plt.ylabel('Percentage')
+
+
+loan_data = loan_data.drop(['Income_bin', 'Coapplicant_Income_bin', 'LoanAmount_bin', 'Total_Income_bin', 'Total_Income'], axis=1)
+loan_data['Dependents'].replace('3+', 3, inplace=True)
+test_data['Dependents'].replace('3+', 3, inplace=True)
+
+
+matrix = loan_data.corr()
+f, ax = plt.subplots(figsize=(9, 6))
+sns.heatmap(matrix, vmax=.8, square=True, cmap="BuPu", annot=True)
+
+
+loan_data.isnull().sum()
+
+
+# There are missing values in Gender, Married, Dependents, Self_Employed, LoanAmount, Loan_Amount_Term and Credit_History features
+# We will treat the missing values in all the features one by one
+# We can consider these methods to fill the missing values
+# For numerical variables: imputation using mean or median, For categorical variables: imputation using mode
+# There are very less missing values in Gender, Married, Dependents, Credit_History and Self_Employed features so we can fill them using the mode of the features
+
+
+loan_data['Gender'].fillna(loan_data['Gender'].mode()[0], inplace=True)
+loan_data['Married'].fillna(loan_data['Married'].mode()[0], inplace=True)
+loan_data['Dependents'].fillna(loan_data['Dependents'].mode()[0], inplace=True)
+loan_data['Self_Employed'].fillna(loan_data['Self_Employed'].mode()[0], inplace=True)
+loan_data['Credit_History'].fillna(loan_data['Credit_History'].mode()[0], inplace=True)
+
+loan_data['Loan_Amount_Term'].value_counts()
+
+loan_data['Loan_Amount_Term'].fillna(loan_data['Loan_Amount_Term'].mode()[0], inplace=True)
+
+loan_data['LoanAmount'].fillna(loan_data['LoanAmount'].median(), inplace=True)
+
+loan_data.isnull().sum()
+
+
+# As we can see that all the missing values have been filled in the test dataset. Let’s fill all the missing values in the test dataset too with the same approach.
+
+test_data['Gender'].fillna(loan_data['Gender'].mode()[0], inplace=True)
+test_data['Married'].fillna(loan_data['Married'].mode()[0], inplace=True)
+test_data['Dependents'].fillna(loan_data['Dependents'].mode()[0], inplace=True)
+test_data['Self_Employed'].fillna(loan_data['Self_Employed'].mode()[0], inplace=True)
+test_data['Credit_History'].fillna(loan_data['Credit_History'].mode()[0], inplace=True)
+test_data['Loan_Amount_Term'].fillna(loan_data['Loan_Amount_Term'].mode()[0], inplace=True)
+test_data['LoanAmount'].fillna(loan_data['LoanAmount'].median(), inplace=True)
+
+## Outlier Treatement
+
+import numpy as np
+
+loan_data['LoanAmount_log'] = np.log(loan_data['LoanAmount'])
+loan_data['LoanAmount_log'].hist(bins=20)
+test_data['LoanAmount_log'] = np.log(test_data['LoanAmount'])
+
+
+
+# Logistic Regression is a classification algorithm. It is used to predict a binary outcome (1 / 0, Yes / No, True / False) given a set of independent variables.
+# Logistic regression is an estimation of Logit function. Logit function is simply a log of odds in favor of the event. This function creates a s-shaped curve with the probability 
+# estimate, which is very similar to the required step wise function
+
+## Model Building
+
+loan_data=loan_data.drop('Loan_ID',axis=1)
+test_data=test_data.drop('Loan_ID',axis=1)
+
+# We will use scikit-learn (sklearn) for making different models which is an open source library for Python. It is one of the most ef cient tool which contains many inbuilt functions #that can be used for modeling in Python.
+    
+#To learn further about sklearn, refer here: http://scikit-learn.org/stable/tutorial/index.html
+    
+# Sklearn requires the target variable in a separate dataset. So, we will drop our target variable from the train dataset and save it in another dataset.
+
+X = loan_data.drop('Loan_Status',axis=1)
+y = loan_data.Loan_Status
+
+
+
+train = loan_data.copy()
+test = test_data.copy()
+
+
+X = pd.get_dummies(X)
+train=pd.get_dummies(train)
+test=pd.get_dummies(test)
+
+
+# Now we will train the model on training dataset and make predictions for the test dataset. But can we validate these predictions? One way of doing this is we can divide our train 
+# dataset into two parts: train and validation. We can train the model on this train part and using that make predictions for the validation part. In this way we can validate our 
+# predictions as we have the true predictions for the validation part (which we do not have for the test dataset).
+
+# We will use the train_test_split function from sklearn to divide our train dataset. So, first let us import train_test_split.
+
+from sklearn.model_selection import train_test_split
+x_train, x_valid, y_train, y_valid = train_test_split(X,y, test_size=0.3)
+
+# The dataset has been divided into training and validation part. Let us import LogisticRegression and accuracy_score from sklearn and fit the logistic regression model
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score
+model = LogisticRegression()
+model.fit(x_train, y_train)
+
+# LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True, intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1, penalty='12
+
+# Model Accuracy =  0.8783783783783784
+# Model F1-Score =  0.9217391304347826
+
+pred_cv = model.predict(x_valid)
+print('Model Accuracy = ', accuracy_score(y_valid,pred_cv))
+print('Model F1-Score = ', f1_score(y_valid,pred_cv))
+
+
+# So our predictions are almost 70% accurate, i.e. we have identified 70% of the loan status correctly
+# Let’s make predictions for the test dataset
+
+pred_test = model.predict(test)
+
+# To create Dataframe of predicted value with particular respective index
+
+res = pd.DataFrame(pred_test) #preditcions are nothing but the final predictions of your model on input features of your new unseen test data
+res.index = test_data.index # its important for comparison. Here "test_new" is your new test dataset
+res.columns = ["prediction"]
+
+# To download the csv file locally
+
+from google.colab import files
+res.to_csv('datathon_loan_lr.csv', index=False)
+files.download('datathon_loan_lr.csv')
+
+
+
+
+# Logistic Regression using stratified k-folds cross validation
+# Stratification is the process of rearranging the data so as to ensure that each fold is a good representative of the whole.
+#For example, in a binary classification problem where each class comprises of 50% of the data, it is best to arrange the data such that in every fold, each class comprises of about half # the instances.
+
+# It is generally a better approach when dealing with both bias and variance.
+# A randomly selected fold might not adequately represent the minor class, particularly in cases where there is a huge class imbalance.
+
+
+
+from sklearn.model_selection import StratifiedKFold
+
+# Now let’s make a cross validation logistic model with stratified 5 folds and make predictions for test dataset
+
+# Initialize variables
+i = 1
+mean = 0
+fmean = 0
+
+
+# Create a StratifiedKFold object with 5 splits
+kf = StratifiedKFold(n_splits=5)
+
+# Iterate over the folds
+
+for train_index, test_index in kf.split(X, y):
+
+    # Print the current fold number
+    print(f'\n{i} of {kf.n_splits} folds')
+
+    # Split the training and testing data
+    xtr, xvl = X.loc[train_index], X.loc[test_index]
+    ytr, yvl = y[train_index], y[test_index]
+
+    # Create a LogisticRegression model
+    model = LogisticRegression(random_state=1)
+
+    # Fit the model to the training data
+    model.fit(xtr, ytr)
+
+    # Make predictions on the testing data
+    pred_test = model.predict(xvl)
+
+    # Calculate the accuracy and F1 score on the testing data
+    score = accuracy_score(yvl, pred_test)
+    f1score = f1_score(yvl, pred_test)
+
+    # Update the mean and F1 mean scores
+    mean += score
+    fmean += f1score
+
+    # Print the accuracy and F1 score for the current fold
+    print('#######################')
+    print(f'accuracy_score: {score}')
+    print('-------------------------')
+    print(f'F1 Score: {f1score}')
+    print('#######################')
+
+    # Increment the fold number
+    i += 1
+
+
+# Make predictions on the test data
+pred_test_f = model.predict(test)
+
+# Calculate the predicted probabilities for the testing data
+pred = model.predict_proba(xvl)[:, 1]
+
+# Print the mean accuracy and F1 score for all folds
+print('----------- Final Mean Score---------------')
+print('###########################################')
+print(f'\nMean Validation Accuracy: {mean / (i - 1)}')
+print(f'\nMean Validation F1 Score: {fmean / (i - 1)}')
+print('###########################################')
+print('-------------------------------------------')
+
+
+# The mean validation accuracy for this model turns out to be 0.7922
+# The mean validation f1 score for this model turns out to be 0.8639
+# Let us visualize the roc curve.
+
+from sklearn.metrics import roc_curve, roc_auc_score
+
+# Calculate the false positive rate (FPR), true positive rate (TPR), and thresholds
+fpr, tpr, _ = roc_curve(yvl, pred)
+
+# Calculate the area under the ROC curve (AUC)
+auc = roc_auc_score(yvl, pred)
+
+# Create a figure with a size of 12x8 inches
+plt.figure(figsize=(12, 8))
+
+# Plot the ROC curve
+plt.plot(fpr, tpr, label="validation, auc=" + str(auc))
+
+# Set the x and y axis labels
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+
+# Add a legend
+plt.legend(loc=4)
+
+# Show the plot
+plt.show()
+
+
+# We got an auc value of 0.817
+
+
+train['Total_Income']=train['ApplicantIncome']+train['CoapplicantIncome']
+test['Total_Income']=test['ApplicantIncome']+test['CoapplicantIncome']
+
+sns.distplot(train['Total_Income'])
+
+# We can see it is shifted towards left, i.e., the distribution is right skewed. So, let’s take the log transformation to make the distribution normal.
+
+
+# Create a logarithmic transformation of the Total_Income column in the train and test DataFrames
+
+train['Total_Income_log'] = np.log(train['Total_Income'])
+test['Total_Income_log'] = np.log(test['Total_Income'])
+
+# Plot a distribution plot of the Total_Income_log column in the train DataFrame
+sns.distplot(train['Total_Income_log'])
+
+
+train['EMI']=train['LoanAmount']/train['Loan_Amount_Term']
+test['EMI']=test['LoanAmount']/test['Loan_Amount_Term']
+
+sns.distplot(train['EMI'])
+
+# Let us create Balance Income feature now and check its distribution
+
+
+# Create a new column called 'Balance Income' in the train and test DataFrames
+train['Balance Income'] = train['Total_Income'] - (train['EMI'] * 1000)
+test['Balance Income'] = test['Total_Income'] - (test['EMI'] * 1000)
+
+# Plot a distribution plot of the 'Balance Income' column in the train DataFrame using the Seaborn distplot() function
+sns.distplot(train['Balance Income'])
+
+
+train=train.drop(['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount', 'Loan_Amount_Term'], axis=1)
+test=test.drop(['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount', 'Loan_Amount_Term'], axis=1)
+
+
+
+# After creating new features, we can continue the model building process.
+# So we will start with logistic regression model and then move over to more complex models like RandomForest and XGBoost.
+# We will build the following models in this section.
+
+# Logistic Regression
+# Decision Tree
+# Random Forest
+# XGBoost
+
+# Let’s prepare the data for feeding into the models
+
+X = train.drop('Loan_Status', axis= 1)
+y = train.Loan_Status
+
+
+### Logistic Regression
+
+i = 1
+mean = 0
+fmean = 0
+
+print('----------- After Features Engineering---------------')
+
+kf = StratifiedKFold(n_splits=5)
+
+for train_index, test_index in kf.split(X, y):
+
+    print(f'\n{i} of {kf.n_splits} folds')
+
+    xtr, xvl = X.loc[train_index], X.loc[test_index]
+    ytr, yvl = y[train_index], y[test_index]
+
+    model = LogisticRegression(random_state=1)
+    model.fit(xtr, ytr)
+
+    pred_test = model.predict(xvl)
+    score = accuracy_score(yvl, pred_test)
+    f1score = f1_score(yvl, pred_test)
+
+    mean += score
+    fmean += f1score
+
+    print('#######################')
+    print(f'accuracy_score: {score}')
+    print('-------------------------')
+    print(f'F1 Score: {f1score}')
+    print('#######################')
+
+    i += 1
+
+    pred_test_fe = model.predict(test)
+    pred = model.predict_proba(xvl)[:, 1]
+
+print('----------- Final Mean Score---------------')
+print('###########################################')
+print(f'\nMean Validation Accuracy: {mean / (i - 1)}')
+print(f'\nMean Validation F1 Score: {fmean / (i - 1)}')
+print('###########################################')
+print('-------------------------------------------')
+
+
+from sklearn.metrics import roc_curve, roc_auc_score
+
+# Calculate the false positive rate (FPR), true positive rate (TPR), and thresholds
+fpr, tpr, _ = roc_curve(yvl, pred)
+
+# Calculate the area under the ROC curve (AUC)
+auc = roc_auc_score(yvl, pred)
+
+# Create a figure with a size of 12x8 inches
+plt.figure(figsize=(12, 8))
+
+# Plot the ROC curve
+plt.plot(fpr, tpr, label="validation, auc=" + str(auc))
+
+# Set the x and y axis labels
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+
+# Add a legend
+plt.legend(loc=4)
+
+# Show the plot
+plt.show()
+
+
+
+### Decision Tree
+# Decision tree is a type of supervised learning algorithm(having a pre-defined target variable) that is mostly used in classification problems. In this technique, we split the 
+# population or sample into two or more homogeneous sets(or sub-populations) based on most significant splitter / differentiator in input variables.\n",
+
+# Decision trees use multiple algorithms to decide to split a node in two or more sub-nodes. The creation of sub-nodes increases the homogeneity of resultant sub-nodes. In other words, 
+# we can say that purity of the node increases with respect to the target variable.\n",
+# For detailed explanation visit https://www.analyticsvidhya.com/blog/2016/04/complete-tutorial-tree-based-modeling-scratch-in-python/#six
+
+# Let’s fit the decision tree model with 5 folds of cross validation.
+
+
+
+# Initialize variables
+i = 1
+mean = 0
+fmean = 0
+
+# Split the data into training and testing sets
+kf = StratifiedKFold(n_splits=5)
+
+# Iterate over the folds
+for train_index, test_index in kf.split(X, y):
+
+    # Train a decision tree classifier model on the training data
+    model_tree = DecisionTreeClassifier(random_state=1)
+    model_tree.fit(X.loc[train_index], y[train_index])
+
+    # Make predictions on the testing data
+    pred_test = model_tree.predict(X.loc[test_index])
+
+    # Calculate the accuracy and F1 score on the testing data
+    score = accuracy_score(y[test_index], pred_test)
+    f1score = f1_score(y[test_index], pred_test)
+
+    # Update the mean and F1 mean scores
+    mean += score
+    fmean += f1score
+
+    # Print the accuracy and F1 score for the current fold
+    print('#######################')
+    print(f'accuracy_score: {score}')
+    print('-------------------------')
+    print(f'F1 Score: {f1score}')
+    print('#######################')
+
+    # Increment the fold number
+    i += 1
+
+# Make predictions on the test data
+pred_test_tree = model_tree.predict(test)
+
+# Calculate the predicted probabilities for the testing data
+pred = model_tree.predict_proba(X.loc[test_index])[:, 1]
+
+# Print the mean accuracy and F1 score for all folds
+print('----------- Final Mean Score---------------')
+print('###########################################')
+print(f'\nMean Validation Accuracy: {mean / (i - 1)}')
+print(f'\nMean Validation F1 Score: {fmean / (i - 1)}')
+print('###########################################')
+print('-------------------------------------------')
+
+# Plot an ROC curve for the decision tree classifier model on the testing data
+fpr, tpr, _ = roc_curve(y[test_index], pred)
+auc = roc_auc_score(y[test_index], pred)
+plt.figure(figsize=(12, 8))
+plt.plot(fpr, tpr, label="validation, auc=" + str(auc))
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend(loc=4)
+plt.show()
+
+
