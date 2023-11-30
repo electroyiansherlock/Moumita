@@ -1,0 +1,1009 @@
+import sys
+import numpy as np
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns
+import datetime
+import time
+
+sns.set()
+pal = sns.hls_palette(10, h=.5)
+sns.set_palette(pal)
+
+pd.set_option('display.float_format', lambda x: '%.4f' % x)
+
+from google.colab import drive
+drive.mount('/gdrive')
+
+cd /gdrive
+cd MyDrive
+
+
+df_uber = pd.read_csv('uber_nyc_data.csv')
+
+df_uber.info()
+
+df_uber.head()
+
+len(df_uber.id.unique())
+
+len(df_uber[df_uber.duplicated() == True])  "No duplicate entries are present in dataset."
+
+df_uber.isnull().sum()   // Show total null values per column. Use .sum() to just show which columns
+
+arr1 = df_uber.origin_taz.unique()
+
+arr2 = df_uber.destination_taz.unique()
+
+set(arr2) - set(arr1)       "* Here maybe code 18 represents **EWR airport?**(EWR airport or Newark Airport is a airport near New York City (~25 km/15 miles) and many of its passengers are flying to or from NYC, that's why it's considered one of NYC's 3 regional airports (along with LaGuardia and Kennedy.)"
+
+df_uber[df_uber.destination_taz.isnull()].head()
+
+df38 = df_uber[df_uber.trip_duration.isnull() & df_uber.trip_distance.isnull()]
+
+df38.head(38)
+
+len(df_uber[(df_uber.trip_duration.isnull() == False) & (df_uber.trip_distance.isnull())])
+
+len(df_uber[df_uber.pickup_datetime.apply(lambda x: x[-5:] == '00:00') == False])       
+
+"* If not familiar with **lambda function,apply function** and their application then go through this [Lambda and apply function Article](https://www.analyticsvidhya.com/blog/2021/07/most-powerful-python-functions-apply-and-lambda/.)"
+
+def dateParser(s):\n",
+    "    return datetime.datetime(int(s[0:4]), int(s[5:7]), int(s[8:10]), int(s[11:13]))
+
+
+df_uber.head()
+
+t0 = time.time()
+
+df_uber['pu_date_hour'] = df_uber.pickup_datetime.apply(dateParser)
+
+time.time() - t0       //we applied the date parser method and converted datetime object featured in pu_date_hour column( pu_date_hour= pick up time and date)
+
+df_uber.head()
+
+df_uber.info()
+
+df_uber = df_uber.drop('pickup_datetime', axis=1)    //Here we can drop pickup_datetime column since we have pu_date_hour column
+
+beginning = df_uber.pu_date_hour.min()\n 
+end = df_uber.pu_date_hour.max() 
+print(beginning, end, end - beginning)
+
+df_uber.head()
+
+from pandas.tseries.holiday import USFederalHolidayCalendar   // if return_name is True, then name is series value and date is the series index, otherwise date is series value.
+
+holidays = USFederalHolidayCalendar().holidays(beginning, end, return_name = True)
+
+holidays
+
+// We get the list of all holidays occurs during the same time period of 365 days and we analyse the no. of uber rides the a day before holidays and a day after holiday and on that day as well.
+
+holidays.index.map(lambda x: x.strftime('%a'))
+
+"source": [
+    "#For completeness, let's add the day before and after the holidays (better: add day after if Thursday)\n",
+   ]
+
+
+holidays_all = pd.concat([holidays, Day After + holidays.shift(1, 'D'), Day Before + holidays.shift(-1, 'D')])
+holidays_all = holidays_all.sort_index()
+holidays_all.head(10)
+
+
+// Create a column with the date, without the time. This will be useful later
+
+t0 = time.time()
+
+df_uber['pu_date'] = pd.Series(map(lambda x: x.astype('datetime64[D]'), df_uber['pu_date_hour'].values))
+
+time.time() - t0
+
+
+
+df_uber.head()
+
+df_uber['year'] = df_uber['pu_date_hour'].dt.year
+
+df_uber['month'] = df_uber['pu_date_hour'].dt.month
+
+df_uber.head()
+
+// Get trip pick up day of the month
+
+t0 = time.time()
+
+df_uber['day'] = df_uber['pu_date_hour'].dt.day #.apply(lambda x: x.day) = 105 seconds vs < 2 seconds with dt
+
+time.time() - t0
+
+df_uber.head()
+
+// Get trip pick up hour from timestamp
+
+t0 = time.time()
+
+df_uber['hour'] = df_uber['pu_date_hour'].dt.hour #< 2 seconds vs 101 seconds using apply lambda
+
+time.time() - t0
+
+df_uber.head()
+
+t0 = time.time()
+
+df_uber['weekday'] = df_uber['pu_date_hour'].dt.dayofweek
+
+time.time() - t0
+
+df_uber.head()
+
+df_uber.weekday.value_counts() #Monday = 0, Sunday = 6
+
+df_uber.head()
+
+df_uber.info()
+
+// Transform trip duration data
+
+uniq_dur = df_uber[df_uber.trip_duration.isnull() == False].trip_duration.unique()
+
+print(len(uniq_dur))
+
+// Among unique duration strings, find how many represent >= 10h of duration
+    
+long_duration = [] #>= 10 hours or 600 minutes
+
+for item in uniq_dur:
+    if len(item) != 7:
+    	long_duration.append(item)
+    
+long_duration
+print(len(long_duration))
+
+// Check for the most unusual strings for trip duration: some erroneous entries need to be addressed
+
+for item in long_duration:
+	if len(item) > 8:
+		print(item)
+
+
+
+// Function that takes a string with the hh:mm:ss format and
+// returns the integer equivalent of the total time in minutes
+// or zero for missing values in a Pandas dataframe.
+
+def duration_to_minutes(s):
+	if pd.isnull(s):
+		val = 0 #note: this fills with 0 the 38 instances with null (missing) values
+	else:
+		hms = s.split(':')
+		val = int(hms[0])*60 + int(hms[1]) + int(hms[2])/60.0
+	return val
+
+t0 = time.time()
+df_uber['duration_min'] = df_uber.trip_duration.apply(duration_to_minutes)
+time.time() - t0
+
+
+df_uber.head()
+
+
+// In this section we have transformed the trip duration from hms format to minutes so that we are able to calculate the **Revenue** and avoid those erroneous data from calculation which is not possible in practical life, we will se it's application in later section."
+
+
+// Get the mean distance and duration for each origin-destination pair
+
+df_DistDur = df_uber.groupby(['origin_taz', 'destination_taz'])[['trip_distance', 'duration_min']].mean()
+
+df_DistDur.head()
+
+
+// Replace 38 missing values with the average distance and duration for the respective origin-destination pair
+
+for i in df38.index:
+	orig = df_uber.loc[i, 'origin_taz'
+	dest = df_uber.loc[i, 'destination_taz']
+	df_uber.loc[i, 'trip_distance'] = df_DistDur.loc[orig, dest].trip_distance
+	df_uber.loc[i, 'duration_min'] = df_DistDur.loc[orig, dest].duration_min
+
+
+df_uber.isnull().sum() //here trip_duration still showing 38 null values because missing values replaced in duration min
+
+// Calculate average trip speed (mph) to help in understanding outliers (like trips with duration >10 h)
+// Calculate average speed for each trip
+df_uber['trip_mph_avg'] = df_uber.trip_distance/(df_uber.duration_min/60.0)
+
+// Check that trip_distance and duration_min have been replaced, and trip speed has been calculated
+df_uber.iloc[df38.index, :].head()
+
+
+// Drop redundant trip_duration columns
+df_uber = df_uber.drop('trip_duration', axis=1)
+df_uber = df_uber.drop('pu_date_hour', axis=1)
+
+//Calculate Estimated Revenue per Trip
+
+//Source: http://uberestimate.com/prices/New-York-City/ for Uber X
+
+base_fare = 2.5
+per_minute = 0.35
+per_mile = 1.75
+min_fare = 8
+
+def est_revenue(arr):
+	rev = base_fare + arr[0] * per_minute + arr[1] * per_mile
+	return rev if rev > min_fare else min_fare
+
+
+df_uber['est_revenue'] = pd.Series(map(lambda x: est_revenue(x), test))
+
+
+'''
+#Using eval() is even more efficient for large datasets than resorting to Numpy! \n",
+    "#Local variables must be followed by @. Only for arithmetic, cannot use if statement, for example.\n",
+  
+'''
+
+df_uber['est_revenue'] = df_uber.eval('@base_fare + duration_min * @per_minute + trip_distance * @per_mile')
+df_uber.loc[df_uber.est_revenue < 8, 'est_revenue'] = min_fare
+
+df_uber.head()
+
+# Queries for Checking Data Consistency
+
+
+#Check for very long duration entries, and effect on revenue number
+
+print(len(df_uber[(df_uber.duration_min >= 6000)]))
+
+>16h and <100h : 116 entries\n",
+
+df_uber[(df_uber.duration_min > 960) & (df_uber.duration_min < 6000)].est_revenue.sum()     #$78,070 total revenue
+
+```
+"Greater than 100h: 7 entries (erroneous): system error? fraud? Total revenue is relevant: $14,459,978 (2.4% of total)\n",
+    "probable system error: distance < 10 miles\n",
+    "\n",
+    "\n",
+    "The effect on revenue is relevant only for the trips higher than 100h of duration, which are most likely a result of some system error (as seen above), or perhaps fraud, 
+    therefore these 7 entries will be excluded from the dataset for analysis. However, assuming that driving more than 16h (960 minutes) non-stop per day represents unreliable data,
+    these additional 116 cases will also be excluded from analysis. These 123 data points warrant more in-depth internal investigation to bring light to what may have caused them."
+   ]
+```
+
+'''
+"source": [
+    "->Were the trips with distance and duration equal to zero actually cancelled (didn't happen)?\n",
+    "\n",
+    "->There is at least one case almost daily. The 24866 cases represent a revenue of \\$198,928, based on $8 minimum fare."
+   ]
+'''
+
+print(len(df_uber[(df_uber.duration_min == 0) & (df_uber.trip_distance == 0)])) #24866
+
+#Note that origin and destination are the same, except for 910 trips: did these trips in fact occur?
+#There is generally a fee associated with trip cancellation, so unless these trips represent a system error or fraud,there was no loss of the minimum fare revenue.
+
+df_uber[(df_uber.duration_min == 0) & (df_uber.trip_distance == 0) & (df_uber.origin_taz != df_uber.destination_taz)].
+head()  #910
+
+# Check cases with distance equal to zero but duration greater than zero
+
+print(len(df_uber[(df_uber.duration_min > 0) & (df_uber.trip_distance == 0)])) #85515
+
+#The median duration for trips with zero distance is 10 seconds (mean= 2.4 minutes), so most of these 85,515 cases possibly represent trips 
+#that were cancelled right after they were registered.3873 trips of the 85,515 cases show pick up and drop off in different taxi zones \n",
+#"(median duration: 10 seconds, mean: 4.5 minutes).
+
+
+#Let's check the small dataset (277) out of the 3873 cases with duration > 5 minutes, but distance equal to zero:Maybe these cases represent 
+#some error with registering the distance traveled?"
+ 
+
+
+df_uber[(df_uber.duration_min >= 5) & (df_uber.trip_distance == 0) &(df_uber.origin_taz != df_uber.destination_taz)].head(10)
+
+# Check the trips with average speed slower than walking (3mph)
+
+print(len(df_uber[df_uber.trip_mph_avg <= 3])) #262,666 cases
+
+
+# Considering that some really bad traffic is possible, let's check the proportion of cases that fall under 2 miles or less traveled distance
+
+
+df_uber[(df_uber.trip_mph_avg <= 3) & (df_uber.trip_distance <= 2)].head(10) #246,225, or ~94% of all trips with < 3mph
+
+
+# 0.8% of cases from the entire dataset have calculated speed < 3mph : really bad traffic cases, interrupted trips, or fraud? 
+# We will assume they're mostly really bad traffic cases or interrupted trips for this analysis."
+
+
+```
+Among the trips with very slow speed (< 3 mph), the most suspicious cases are perhaps those that show very long\n",
+    "duration. Let's say that 1.5h would have been enough, in most situations, to get outside of some traffic gridlock, \n",
+    "then part of these cases should be investigated more in depth, especially because they represent a significant \n",
+    "share of the revenue ($850K).
+```
+
+df_uber[(df_uber.trip_mph_avg <= 3) & (df_uber.duration_min > 90) & (df_uber.duration_min <= 960)].head(10)#8393 cases
+
+len(df_uber[(df_uber.month==8)&(df_uber.year==2015)])
+
+(1)-2.4% to total revenue estimated by considering trip duration greater than 100 hour would be sysytem error and should not be considered for revenue estimation and 
+even the trip duration greater than 16 hour also not reliable that is also excluded for revenue estimation.
+(2)-24866 cases are cancelled trips that should not be included in revenue estimation
+(3)-Average speed less than 3km(i.e. less than walking speed) could be error,fraud or really bad traffic.
+
+# Filter Dataset
+
+# A few data points represent the zeroth hour of Sep, 2015, extending the time period beyond exactly 365 days
+
+len(df_uber[df_uber.pu_date == datetime.date(2015, 9, 1)])
+
+# 1852 data points to be censored for convenience.
+
+# Create dataframe to be used for visualization with exactly 365 days of data, and max trip duration of 16h
+
+df_viz = df_uber[(df_uber.pu_date != datetime.date(2015, 9, 1)) & (df_uber.duration_min <= 960)].copy() #1975 cases
+
+# Only data of 365 days and trip duration less than 16 hours is considered for vizualisation so 1975 rows has been removed.
+
+#Define Functions, and Load Methods to be Used to Create Visualizations & Analysis
+
+print(len(df_viz))
+
+
+#Descriptive statistics for numerical features:\n
+
+df_viz[['duration_min', 'trip_distance', 'trip_mph_avg', 'est_revenue']].describe()
+
+#Required by Plotly:\n
+
+import matplotlib.mlab as mlab
+import plotly.plotly as py
+
+
+
+from matplotlib.ticker import FuncFormatter #Call formatter function to format tick values\n
+from matplotlib.offsetbox import (OffsetImage, AnnotationBbox) #Create image box
+from matplotlib._png import read_png #Load png file
+from matplotlib.patches import Ellipse #Draw ellipse
+
+#Create functions to format tick numbers, Returns number with thousands comma and no decimals
+def thousands_comma(x, pos):
+	return '{:,.0f}'.format(x) #this is the new syntax for formatting
+
+
+def thousands_format(x, pos):
+	return '{:.0f}{}'.format(x * 1e-3, 'K') #old syntax: '%1.0fK' % (x * 1e-3)
+
+
+# Returns number of millions with a $ sign, M in lieu of 6 zeros, and no decimals.
+def millions_format(x, pos):
+	return '{:.1f}{}'.format(x * 1e-6, 'M')
+
+
+# Function to automatically add labels on bar charts.
+# It takes a plot axis, an ordered list of labels, and text kwargs.
+
+def annotate_labels(ax, labels_list, **kwargs):
+	(y_bottom, y_top) = ax.get_ylim()
+	y_height = y_top - y_bottom
+	rects = ax.patches
+
+	for rect, label in zip(rects, labels_list):
+		height = rect.get_height()
+		p_height = (height / y_height) # Fraction of axis height taken up by this rectangle
+		label_position = height + (y_height * 0.01)
+		ax.text(rect.get_x() + rect.get_width()/2., label_position, label, kwargs)
+		return None
+
+
+# Above defined functions is to represent large numbers in thousands(K) and millions(M) format.
+
+## Visualizing the demand: number of Uber trips per day.
+
+#Create a plotting dataframe with counts (number of trips) grouped by day
+
+byDate = df_viz.groupby('pu_date')['id'].count() #365 complete entries
+byDate.head()
+
+byDate['2014-10-28': '2014-11-05'] #an uptick in rides on 11/1, the day before the NYC marathon!
+
+byDate['2015-06-01': '2015-08-31'].mean()
+
+# !ls Data/icons
+
+# Create a plot with the total number of trips per day, highlighting some changepoints associated with major holidays, and other weather and touristic/cultural events
+
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.ticker import FuncFormatter
+from matplotlib.image import imread
+
+fig = plt.figure()
+ax = byDate.plot(figsize = (16, 8), fontsize = 12, ylim = (10000, 170000), color = 'navy')
+formatter = FuncFormatter(thousands_format)
+
+ax.yaxis.set_major_formatter(formatter)
+ax.set_facecolor('#F9F9F9') #make background color a lighter gray to better contrast with the icon's images
+plt.title('Total Trips per Day with Annotation of Some Major Events and Holidays', fontsize= 20, color='navy')
+plt.tick_params(labelsize=14)
+plt.xlabel('')
+
+
+#Add icon to indicate snowstorm on the plot
+# NYC's mayor ordered the city under curfew, and public transportation system was shut down late on 1/26/15.
+
+img1 = imread('Snow.png')
+imagebox = OffsetImage(img1, zoom=0.6)
+xy = ['2015-01-27', 25000] # (len(byDate[:'2015-01-27'])-1, byDate['2015-01-27'])
+
+ab = AnnotationBbox(imagebox, xy, xybox=(22., 10.), xycoords='data' boxcoords='offset points',pad=0.1, frameon=False) #padding around the image
+
+ax.add_artist(ab)
+
+#Add icon to indicate Thanksgiving on the plot:
+
+img2 = imread('thanksgiving.jpg')
+imagebox = OffsetImage(img2, zoom=0.6)
+xy = ['2014-12-25', 25000] 
+ab = AnnotationBbox(imagebox, xy, xybox=(10., 5.), xycoords='data', boxcoords='offset points', pad=0.1, frameon=False)
+ax.add_artist(ab)
+
+#Add icon to indicate Pride Week on the plot
+
+img4 = imread('rainbow.png')
+imagebox = OffsetImage(img4, zoom=0.6)
+xy = ['2015-06-27', 150000]
+ab = AnnotationBbox(imagebox, xy, xybox=(18., 2.), xycoords='data', boxcoords='offset points', pad=0.1, frameon=False)
+ax.add_artist(ab)
+
+img5 = imread('iday.jpg')
+imagebox = OffsetImage(img5, zoom=0.6)
+xy = ['2015-07-03', 70000]
+ab = AnnotationBbox(imagebox, xy, xybox=(5., -10.), xycoords='data', boxcoords='offset points', pad=0.1, frameon=False)
+ax.add_artist(ab)
+
+#Add icon to indicate NYC Marathon event on the plot
+
+img5 = imread('marathon.jpg')
+imagebox = OffsetImage(img5, zoom=0.7)
+xy = ['2014-11-01', 110000]
+ab = AnnotationBbox(imagebox, xy, xybox=(5., 7.), xycoords='data', boxcoords='offset points', pad=0.1, frameon=False)
+ax.add_artist(ab)
+plt.show()
+
+weekday_labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+month_labels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.ticker import FuncFormatter
+
+fig = plt.figure(figsize=(15, 16))
+plt.subplot(3, 1, 1)
+
+ax1 = sns.countplot(data=df_viz, x='hour', order=range(24))
+ax1.yaxis.set_major_formatter(formatter)
+plt.tick_params(labelsize=13)
+plt.title('Total Number of Trips Between 9/1/2014 and 8/31/2015', fontsize=17, color='navy')
+plt.xlabel('Hour', fontsize=13)
+plt.subplot(3, 1, 2)
+ax2 = sns.countplot(data=df_viz, x='weekday', order=range(7))
+ax2.set_xticklabels(weekday_labels)
+ax2.yaxis.set_major_formatter(formatter)
+plt.tick_params(labelsize=13)
+plt.xlabel('')
+
+plt.subplot(3, 1, 3)
+ax3 = sns.countplot(data=df_viz, x='month')
+ax3.set_xticklabels(month_labels)
+ax3.yaxis.set_major_formatter(formatter)
+plt.tick_params(labelsize=13)
+plt.xlabel('')
+   
+plt.tight_layout()  # Adjust subplot layout for better spacing)
+plt.show()\n
+
+##Create dataframe with grouped revenue data
+
+byDateRev = df_viz.groupby('month')['est_revenue'].sum()
+
+sumRev = byDateRev.sum()
+
+#Estimate Uber's gross margin for the entire 1 year period based on 25% share of the base revenue
+print("Base Revenue: ${:,.0f}M".format(sumRev * 1e-6), "Uber's Base Gross Margin: ${:,.0f}".format(sumRev * .25))
+
+#Estimated base gross margin based on information that average UberX fare in Sep 2014 was $27 (but it has dropped)
+len(df_viz) * 27 * .25
+
+byDateRev.head()
+
+sumRev= byDateRev.sum()
+sumRev
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.ticker import FuncFormatter
+
+# Define your millions_currency function
+def millions_currency(x, pos):
+    return "${:,.0f}M".format(x * 1e-6)
+
+# Example data or your data loading logic
+
+
+months_seq = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]
+month_labels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']  # Calculate total revenue
+
+plt.figure(figsize=(14, 7))
+formatter = FuncFormatter(millions_currency)
+
+ax = sns.barplot(x=byDateRev.index, y= byDateRev.values, order = months_seq)
+ax.set_xticklabels(month_labels)
+ax.yaxis.set_major_formatter(formatter)
+
+font = {'color': 'navy', 'size': 15}
+plt.text(0, 55000000, 'Total Base Revenue for the Period: ${:,.0f} Million'.format(sumRev * 1e-6)
+plt.xlabel('')
+plt.ylabel('Revenue (Millions)', fontsize=15)
+plt.tick_params(labelsize=13)
+plt.title('Estimated Monthly Base Revenue from Sep-2014 to Aug-2015', fontsize=17, color='navy')
+
+plt.show()
+
+df_viz.est_revenue.mean()
+
+dict_growth = {}
+
+for i in range(len(months_seq)):
+	mo = months_seq[i]
+	rev = byDateRev[mo]
+    if mo == 9:
+    	growth_pct = 0
+    elif mo == 1:
+		growth_pct = ((rev/byDateRev[12]) - 1) * 100
+    else:
+    	growth_pct = ((rev/byDateRev[mo - 1]) - 1) * 100
+    	print(month_labels[i], 'Revenue =', '${:,.0f}'.format(rev), 'Growth % = ', '{:.1f}%'.format(growth_pct))
+   	    dict_growth[month_labels[i]] = growth_pct
+
+#Annotate Total Cummulative Growth for the Period
+   
+df_plt1 = pd.DataFrame(pd.Series(dict_growth), index = month_labels, columns = ['growth_pct'])
+labels_list = df_plt1.growth_pct.values.round(1)
+kwargs = {'fontsize': 12, 'ha':'center', 'va': 'bottom', 'weight': 'bold', 'color': 'navy'}
+ax = df_plt1.plot(kind = 'bar', figsize = (15,7), fontsize = 14, rot = 0, legend=False)#df_plt2[1:] to exclude Sep
+ax.set_facecolor('#F9F9F9')
+ax.get_yaxis().set_ticks([])
+annotate_labels(ax, labels_list, **kwargs)
+
+plt.axhline(0, color='yellow')
+plt.title('Month Over Month Percentage Growth of Base Revenue From September 2014', fontsize = 17, color='navy')
+plt.ylabel('Growth %', fontsize = 15, weight='bold', color='navy')
+plt.ylim(-2, 22)
+plt.tick_params(labelsize=15)
+
+plt.show()
+
+print('Cummulative % Growth Over Period:', df_plt1.growth_pct.sum())
+
+
+df_plt1.cumsum().plot(color = 'navy', marker = 'D', legend = False, figsize=(16, 6))
+plt.title('Cummulative Revenue Growth Percentage from September 2014', fontsize=17, weight='bold', color='navy')
+plt.tick_params(labelsize=14)
+plt.show()
+
+df_plt2 = df_viz.groupby('weekday')['trip_mph_avg'].median() #used median since distribution is skewed.
+
+"#Create plot. Does Saturday have better traffic flow than Monday?\n",
+
+fig = plt.figure()
+labels_list = df_plt2.values.round(1)
+kwargs = {'fontsize': 12, 'ha':'center', 'va': 'bottom', 'weight': 'bold', 'color': 'navy'}
+
+ax = df_plt2.plot(kind='bar', rot = 0, figsize = (12, 6), fontsize = 12, edgecolor='yellow', linewidth=1)
+ax.set_xticklabels(weekday_labels, weight='bold')
+ax.set_facecolor('#F9F9F9')
+ax.get_yaxis().set_ticks([])
+annotate_labels(ax, labels_list, **kwargs)
+
+plt.xlabel('')
+plt.ylabel('Median Trip Speed (mph)', fontsize = 14)
+plt.tick_params(labelsize=14)
+plt.title('Which day of the week has the worst traffic?', fontsize = 18, color='navy')
+plt.show()
+plot_url = py.plot_mpl(fig)
+
+
+plt.figure(figsize = (16,6))
+
+plt.subplot(1,2,1)
+df_viz[(df_viz.weekday >= 5)].groupby('hour')['trip_distance'].median().plot(kind='bar', rot = 0, fontsize=14)
+plt.ylim(0, 9)
+plt.tick_params(labelsize=12)
+plt.ylabel('Median Trip Distance (miles)', fontsize=14, weight='bold', color='navy')
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.title('Weekend', fontsize=14, weight='bold', color='navy')
+
+plt.subplot(1,2,2)
+df_viz[df_viz.weekday < 5].groupby('hour')['trip_distance'].median().plot(kind='bar', rot = 0)
+plt.tick_params(labelsize=12)
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.title('Weekdays', fontsize=14, weight='bold', color='navy')
+
+plt.show()
+
+
+
+fig = plt.figure(figsize = (16,12))\n",
+formatter = FuncFormatter(thousands_format)
+
+
+plt.subplot(2,2,1)
+ax1 = df_viz[(df_viz.weekday < 5) & (df_viz.trip_distance >= 5)].
+groupby('hour')['trip_distance'].count().plot(kind='bar', rot = 0)
+ax1.yaxis.set_major_formatter(formatter)
+ellipse = Ellipse(xy=(5, 150000), width=4, height=200000, edgecolor='red', fc='None', lw=1.5)
+ax1.add_patch(ellipse)
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.ylabel('Demand (number of trips)', fontsize=14, weight='bold', color='navy')
+plt.ylim(0, 1400000)
+plt.title('Weekday, 5 miles or more', fontsize=14, weight='bold', color='navy')
+
+plt.subplot(2,2,2)
+ax2 = df_viz[(df_viz.weekday < 5) & (df_viz.trip_distance < 5)]
+groupby('hour')['trip_distance'].count().plot(kind='bar', rot = 0)
+ax2.yaxis.set_major_formatter(formatter)
+ellipse = Ellipse(xy=(5, 150000), width=4, height=200000, edgecolor='red', fc='None', lw=1.5)
+ax2.add_patch(ellipse)
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.title('Weekday, less than 5 miles', fontsize=14, weight='bold', color='navy')
+
+plt.subplot(2,2,3)
+ax3 = df_viz[(df_viz.weekday >= 5) & (df_viz.trip_distance >= 5)]
+groupby('hour')['trip_distance'].count().plot(kind='bar', rot = 0)
+ax3.yaxis.set_major_formatter(formatter)
+ellipse = Ellipse(xy=(6.5, 50000), width=4, height=80000, edgecolor='red', fc='None', lw=1.5)
+ax3.add_patch(ellipse)
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.ylabel('Demand (number of trips)', fontsize=14, weight='bold', color='navy')
+plt.ylim(0, 500000)
+plt.title('Weekend, 5 miles or more', fontsize=14, weight='bold', color='navy')
+
+plt.subplot(2,2,4)
+ax4 = df_viz[(df_viz.weekday >= 5) & (df_viz.trip_distance < 5)]
+groupby('hour')['trip_distance'].count().plot(kind='bar', rot = 0)
+ax4.yaxis.set_major_formatter(formatter)
+ellipse = Ellipse(xy=(6.5, 50000), width=4, height=80000, edgecolor='red', fc='None', lw=1.5)
+ax4.add_patch(ellipse)
+plt.xlabel('Hour', fontsize=14, weight='bold', color='navy')
+plt.title('Weekend, less than 5 miles', fontsize=14, weight='bold', color='navy')
+
+fig.subplots_adjust(hspace=0.4)
+plt.show()
+#plot_url = py.plot_mpl(fig)
+
+#Percentage of trips represented by the top five origins/destinations:
+
+print(df_viz.origin_taz.value_counts().head(5).sum()/float(len(df_viz))) #13,583,249
+print(df_viz.destination_taz.value_counts().head(5).sum()/float(len(df_viz[df_viz.destination_taz.isnull() == False])))  
+
+
+#Total pickups or drop-offs within any combination of the top 5 locations: 6231353 (20% of the total trips)\n",
+
+len(df_viz[(df_viz.origin_taz.isin(['2A', '15', '4C', '1', '6B']) == True) & 
+(df_viz.destination_taz.isin(['2A', '15', '4C', '1', '6B']) == True)])
+
+#29% of all trips start or finish at 2A:
+
+len(df_viz[(df_viz.origin_taz == '2A') | (df_viz.destination_taz == '2A')])/(1.0*len(df_viz)) #8979830
+
+df_plt3 = df_viz.pivot_table('id', aggfunc='count', index='origin_taz', columns='destination_taz')
+
+df_plt3.shape
+
+
+fig = plt.figure(figsize=(9,9))
+
+cmap = sns.cubehelix_palette(8, start=2, rot=0, dark=0, light=.9, as_cmap=True) #'YlOrRd' #ggplot:'viridis'
+sns.heatmap(df_plt3, cmap=cmap, linewidths=0.1, cbar=False)
+
+plt.title('Total Trips by Pickup and Drof-Off Taxi Zones', fontsize=18, color='navy')
+plt.xlabel('Destination', fontsize=15, fontname='Tahoma', color='navy')
+plt.ylabel('Origin', fontsize=15, fontname='Tahoma', color='navy')
+plt.tick_params(labelsize=11)
+plt.show()
+
+
+len(df_viz[(df_viz.origin_taz.isin(['2A', '15', '4C', '1', '6B']) == True) & 
+               (df_viz.destination_taz.isin(['2A', '15', '4C', '1', '6B']) == True)])
+
+
+#Plot the mean travel time from the most popular origin, to all possible destinations.\n",
+
+df_plt4 = df_viz[df_viz.origin_taz == '2A'].groupby('destination_taz')['trip_distance'].mean().sort_values()
+df_plt5 = df_viz[df_viz.origin_taz == '2A'].groupby('destination_taz')['duration_min'].mean().sort_values()
+
+
+
+"#Assuming 18 is EWR, and given the average driving distance from 2A, this pick up location is probably located in \n",
+    "#Midtown, not in Lower Manhattan (Penn Station lat/long: 40.750568, -73.993519)\n",
+    "#Straight line distance: 11 miles, Driving distance: 15 miles Difference: 36%\n",
+    "#The mean time and distance to zone 18 adds further evidence that it's the EWR airport (from Midtown).\n",
+    "#Based on the distance from 2A, if the origin is Midtown, then 15 is in Upper Manhattan.\n",
+    "\n",
+
+fig = plt.figure(figsize = (16,12))
+kwargs = {'fontsize': 12, 'ha':'center', 'va': 'bottom', 'color': 'navy'}
+
+plt.subplot(2,1,1)
+ax1 = sns.barplot(x=df_plt4.index, y=df_plt4.values)
+ax1.set_facecolor('#F9F9F9')
+#ax1.set_yticks(range(0, 21, 2))
+ax1.get_yaxis().set_ticks([])
+labels_list = df_plt4.values.round(1)
+annotate_labels(ax1, labels_list, **kwargs)
+plt.title('Mean Distance to Destination from the Most Popular Pickup Zone: 2A', fontsize=17, color='navy')
+plt.ylabel('Mean Distance (Miles)', fontsize = 14)
+plt.xlabel('Drop-off Taxi Zone', fontsize=14)
+plt.tick_params(labelsize=12)
+
+plt.subplot(2,1,2)
+ax2 = sns.barplot(x=df_plt5.index, y=df_plt5.values)
+ax2.set_facecolor('#F9F9F9')
+#ax2.set_yticks(range(0, 51, 5))
+ax2.get_yaxis().set_ticks([])
+labels_list = df_plt5.apply(lambda x: '{:.0f}'.format(round(x))).values
+annotate_labels(ax2, labels_list, **kwargs)
+plt.title('Mean Time to Destination from the Most Popular Pickup Zone: 2A', fontsize=17, color='navy')
+plt.ylabel('Mean Time (Minutes)', fontsize = 14)
+plt.ylim(0,55)
+plt.xlabel('Drop-off Taxi Zone', fontsize=14)
+plt.tick_params(labelsize=12)
+
+fig.subplots_adjust(hspace=.5)
+plt.show()
+#plot_url = py.plot_mpl(fig)
+
+df_viz.trip_distance.max(), df_uber.trip_distance.max()
+
+freq, bins_dist = np.histogram(df_viz.trip_distance, bins=10, range=(0, 25))
+
+freq, bins_dist
+
+
+for val in freq:
+	print(float(val)/sum(freq))
+
+
+df_viz.trip_distance.median(), df_viz.trip_distance.mean()
+
+print(len(df_viz[df_viz.trip_distance <= 5])/(1.0 *len(df_viz))) #68% of trips are 5 miles or less
+print(len(df_viz[df_viz.trip_distance <= 2])/(1.0 *len(df_viz))) #32% of trips are 2 miles or less
+
+
+#Very long distance trips (>= 300 miles):
+
+df_viz[df_viz.trip_distance >= 300].head(10) #45 tota
+
+
+#Median trip duration is ~ 17 minutes
+
+df_viz.duration_min.describe()
+
+freq, bins_dur = np.histogram(df_viz.duration_min, bins=10, range=(0, 50))
+    freq, bins_dur
+
+
+#Here we plot the distribution of trip duration next to the histogram of trip distance for comparison.
+
+fig = plt.figure(figsize=(16, 7))
+formatter = FuncFormatter(millions_format)
+
+plt.subplot(1,2,1)
+ax1 = df_viz.trip_distance.dropna().hist(bins=bins_dist)
+ax1.yaxis.set_major_formatter(formatter)
+
+plt.xlabel('Distance (miles)', fontsize=14, weight='bold')
+plt.ylabel('Counts', fontsize=14, weight='bold')
+plt.tick_params(labelsize=14)
+plt.title('Distribution of Trip Distance', color='navy', fontsize=16)
+
+plt.subplot(1,2,2)
+ax2 = df_viz.duration_min.hist(bins=bins_dur)
+ax2.yaxis.set_major_formatter(formatter)
+ax2.set_xticks(bins_dur) #bins are in 5 minutes intervals.
+
+plt.xlabel('Duration (minutes)', fontsize=14, weight='bold')
+plt.ylabel('')
+plt.tick_params(labelsize=14)
+plt.title('Distribution of Trip Duration', color='navy', fontsize=16)
+
+plt.show()
+
+"#Create data to plot with average distance and duration grouped by origin-destination location pairs:\n",
+
+df_plt6 = df_viz.groupby(['origin_taz', 'destination_taz'])['trip_distance', 'duration_min'].mean()
+df_plt6.values
+
+df_plt6.shape #distance, duration (x, y): Fit function to replace 7 incorrect duration entries with estimate. 
+
+ "#Create plot.\n",
+
+distance = df_plt6.values[:,:1]
+duration = df_plt6.values[:,1:]
+duration_hat = pd.Series(distance.reshape(812,)).apply(lambda x: 10*np.sqrt(x))
+
+plt.figure(figsize = (14,7))
+cmap = sns.dark_palette('cyan', 3, reverse = True, as_cmap=True)
+
+plt.scatter(distance, duration, c=distance, cmap= cmap) # it looks like a 10*sqrt(x) power distribution
+plt.scatter(distance, duration_hat, color='red', s=8)
+
+font = {'color': 'red', 'size': 14, 'family': 'Tahoma'}
+plt.text(31, 40, 'y = 10 * sqrt(x)', fontdict = font)
+plt.xlim(0, 40)
+plt.xlabel('Distance', fontsize = 14, weight='bold')
+plt.ylabel('Duration (Minutes)', fontsize = 14, weight='bold')
+plt.tick_params(labelsize=14)
+plt.title('Average Trip Duration and Distance per Origin-Destination Pair', fontsize = 16, color='navy')
+
+plt.show()
+
+df_plt6[df_plt6.trip_distance > 25] #origin and destination pairs whose distance between them is greater than 25 miles
+
+df_viz.trip_mph_avg.describe()
+
+freq, bins = np.histogram(df_viz.trip_mph_avg, bins=10, range=(0, 50))\n",
+    freq, bins
+
+fig, ax = plt.subplots(1,1)
+formatter = FuncFormatter(millions_format)
+
+ax.hist(df_viz.trip_mph_avg.dropna(), bins)
+ax.yaxis.set_major_formatter(formatter)
+
+plt.xlabel('Average Speed (mph)', fontsize=14, weight='bold')
+plt.ylabel('Counts', fontsize=14, weight='bold')
+plt.tick_params(labelsize=14)
+plt.title('Distribution of Average Speed', color='navy', fontsize=16)
+plt.show()
+
+
+ df_plt7 = df_viz[df_viz.weekday < 5].groupby('hour')['trip_mph_avg'].median()
+	df_plt7.head()
+
+ "#Plot Peak Hour Median Trip Average Speed During Weekdays:\n",
+
+plt.figure(figsize =(14, 6))
+kwargs = {'fontsize': 12, 'ha':'center', 'va': 'top', 'color': 'navy', 'weight': 'bold'}
+
+#weekdays only: rush hour traffic 7-9 + 16-18
+ax = df_plt7.plot(marker = 'o', color = 'navy')
+
+for x, y in zip(df_plt7.index, df_plt7.values):
+	ax.annotate('{:.0f}'.format(y), xy=(x, y), xytext= (0, 24), textcoords='offset points', **kwargs)
+
+ax.set_facecolor('#F9F9F9')
+ax.get_yaxis().set_ticks([]) #hide tick labels on y-axis
+plt.fill([7,9,9,7], [0,0,30,30], 'cyan', alpha=0.2)
+plt.fill([16,18,18,16], [0,0,30,30], 'cyan', alpha=0.2)
+plt.xticks(range(24))
+plt.xlabel('Hour', fontsize=14)
+plt.ylabel('Trip Average Speed', fontsize=14)
+plt.ylim(5, 30)
+plt.xlim(-0.5, 23.5)
+plt.tick_params(labelsize=14)
+plt.title('Weekday Average Speed per Hour of the Day - Highlight for Peak Traffic', fontsize = 16, color='navy')
+plt.show()
+
+
+def is_peak_hour(x):
+    Function that takes an array(x) with two integers representing 
+    hour of the day and weekday, respectively, and
+    returns 1 if it's peak hour as defined, 0 otherwise.
+
+    return 1 if x[0] in (7,8,9,16,17,18) and x[1] < 5 else 0 #total peak hour periods = 6h
+
+
+df_viz['peak_hour'] = pd.Series(map(lambda x: is_peak_hour(x), df_viz.loc[:, ['hour', 'weekday']].values))
+
+df_viz.head()
+
+#Plot the total number of trips per month during peak hours and off-peak hours
+# Count for peak hours must represent more than 25% (6h) of the total rides to be more significant than non-peak hours
+
+plt.figure(figsize = (14, 6))
+formatter = FuncFormatter(millions_format)
+
+#to add labels and operate on data, use pivot instead of countplot directly with hue
+
+ax = sns.countplot(x = df_viz['month'], hue = df_viz['peak_hour'])
+ax.set_xticklabels(month_labels)
+ax.yaxis.set_major_formatter(formatter)
+
+handles, labels = ax.get_legend_handles_labels() #will cause the warning msg that can be ignored
+plt.legend(handles, labels=['Peak', 'Off Peak'], loc='best', fontsize=13)
+plt.tick_params(labelsize=13)
+plt.xlabel('Month (2014 - 2015)', fontsize = 15, weight='bold')
+plt.ylabel('Total Trips', fontsize = 15, weight='bold')
+plt.title('Demand of Rides per Month - Peak versus Off-Peak Hours', fontsize = 17, color='navy')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
